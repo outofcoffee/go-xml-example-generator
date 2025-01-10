@@ -1,4 +1,4 @@
-# go-xml-example-generator
+# go-xml-example-generator [![Build and Test](https://github.com/outofcoffee/go-xml-example-generator/actions/workflows/build.yml/badge.svg)](https://github.com/outofcoffee/go-xml-example-generator/actions/workflows/build.yml)
 
 A Go tool that generates example XML snippets from XSD schemas. Given an XSD schema and an element name, it produces a valid XML example that matches the schema's structure.
 
