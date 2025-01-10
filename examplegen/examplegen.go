@@ -35,29 +35,13 @@ func NewGenerator(protoTree []interface{}) *Generator {
 
 // Generate generates an example XML snippet for the given element from an XSD schema file
 func Generate(schemaPath string, elementName string) (string, error) {
-	parser := xgen.NewParser(&xgen.Options{
-		FilePath:            schemaPath,
-		IncludeMap:          make(map[string]bool),
-		LocalNameNSMap:      make(map[string]string),
-		NSSchemaLocationMap: make(map[string]string),
-		ParseFileList:       make(map[string]bool),
-		ParseFileMap:        make(map[string][]interface{}),
-		ProtoTree:           make([]interface{}, 0),
-		RemoteSchema:        make(map[string][]byte),
-		Extract:             true,
-	})
-
-	if err := parser.Parse(); err != nil {
-		return "", fmt.Errorf("failed to parse schema: %w", err)
+	protoTree, err := parseSchema(schemaPath)
+	if err != nil {
+		return "", err
 	}
 
-	return GenerateFromParsedSchema(parser.ProtoTree, elementName), nil
-}
-
-// GenerateFromParsedSchema generates an example XML snippet for the given element from a parsed schema
-func GenerateFromParsedSchema(protoTree []interface{}, elementName string) string {
 	g := NewGenerator(protoTree)
-	return g.generateXML(elementName)
+	return g.generateXML(elementName), nil
 }
 
 // generateXML is the main entry point for XML generation

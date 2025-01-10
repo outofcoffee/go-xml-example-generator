@@ -7,43 +7,27 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/xuri/xgen"
 )
 
-func setupTestSchema(t *testing.T) []interface{} {
-	parser := xgen.NewParser(&xgen.Options{
-		FilePath:            "../schemas/petstore.xsd",
-		IncludeMap:          make(map[string]bool),
-		LocalNameNSMap:      make(map[string]string),
-		NSSchemaLocationMap: make(map[string]string),
-		ParseFileList:       make(map[string]bool),
-		ParseFileMap:        make(map[string][]interface{}),
-		ProtoTree:           make([]interface{}, 0),
-		RemoteSchema:        make(map[string][]byte),
-		Extract:             true,
-	})
-	err := parser.Parse()
-	if err != nil {
-		t.Fatalf("Failed to parse schema: %v", err)
-	}
-	return parser.ProtoTree
-}
-
 func TestGenerate_Examples(t *testing.T) {
-	protoTree := setupTestSchema(t)
 	elements := []string{"getPetByIdRequest", "getPetByIdResponse", "fault"}
 
 	t.Log("\nExample XML for each element type:")
 	for _, element := range elements {
-		xmlStr := Generate(protoTree, element)
+		xmlStr, err := Generate("../schemas/petstore.xsd", element)
+		if err != nil {
+			t.Errorf("Failed to generate XML for %s: %v", element, err)
+			continue
+		}
 		t.Logf("\n%s:\n%s", element, xmlStr)
 	}
 }
 
 func TestGenerate_GetPetByIdRequest(t *testing.T) {
-	protoTree := setupTestSchema(t)
-	xmlStr := Generate(protoTree, "getPetByIdRequest")
+	xmlStr, err := Generate("../schemas/petstore.xsd", "getPetByIdRequest")
+	if err != nil {
+		t.Fatalf("Failed to generate XML: %v", err)
+	}
 
 	// Verify it's valid XML
 	if err := xml.Unmarshal([]byte(xmlStr), new(interface{})); err != nil {
@@ -60,8 +44,10 @@ func TestGenerate_GetPetByIdRequest(t *testing.T) {
 }
 
 func TestGenerate_GetPetByIdResponse(t *testing.T) {
-	protoTree := setupTestSchema(t)
-	xmlStr := Generate(protoTree, "getPetByIdResponse")
+	xmlStr, err := Generate("../schemas/petstore.xsd", "getPetByIdResponse")
+	if err != nil {
+		t.Fatalf("Failed to generate XML: %v", err)
+	}
 
 	// Verify it's valid XML
 	if err := xml.Unmarshal([]byte(xmlStr), new(interface{})); err != nil {
@@ -81,8 +67,10 @@ func TestGenerate_GetPetByIdResponse(t *testing.T) {
 }
 
 func TestGenerate_Fault(t *testing.T) {
-	protoTree := setupTestSchema(t)
-	xmlStr := Generate(protoTree, "fault")
+	xmlStr, err := Generate("../schemas/petstore.xsd", "fault")
+	if err != nil {
+		t.Fatalf("Failed to generate XML: %v", err)
+	}
 
 	// Verify it's valid XML
 	if err := xml.Unmarshal([]byte(xmlStr), new(interface{})); err != nil {
@@ -100,11 +88,20 @@ func TestGenerate_Fault(t *testing.T) {
 }
 
 func TestGenerate_NonExistentElement(t *testing.T) {
-	protoTree := setupTestSchema(t)
-	xmlStr := Generate(protoTree, "nonexistent")
+	xmlStr, err := Generate("../schemas/petstore.xsd", "nonexistent")
+	if err != nil {
+		t.Fatalf("Failed to generate XML: %v", err)
+	}
 
 	if !strings.Contains(xmlStr, "<!-- Element nonexistent not found -->") {
 		t.Error("Expected comment for non-existent element")
+	}
+}
+
+func TestGenerate_NonExistentSchema(t *testing.T) {
+	_, err := Generate("nonexistent.xsd", "element")
+	if err == nil {
+		t.Error("Expected error for non-existent schema")
 	}
 }
 

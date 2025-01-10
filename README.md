@@ -43,37 +43,14 @@ This will output something like:
 ```
 
 ### As a Library
-
-There are two ways to use the library:
-
-1. Direct from XSD file:
 ```go
 import "github.com/outofcoffee/go-xml-example-generator/examplegen"
 
-// Generate XML directly from an XSD file
+// Generate XML from an XSD file
 xml, err := examplegen.Generate("path/to/schema.xsd", "elementName")
 if err != nil {
     log.Fatal(err)
 }
-fmt.Println(xml)
-```
-
-2. From a parsed schema (if you're already using xgen):
-```go
-import (
-    "github.com/outofcoffee/go-xml-example-generator/examplegen"
-    "github.com/xuri/xgen"
-)
-
-// Parse your XSD schema
-parser := xgen.NewParser(&xgen.Options{...})
-err := parser.Parse()
-if err != nil {
-    log.Fatal(err)
-}
-
-// Generate XML from the parsed schema
-xml := examplegen.GenerateFromParsedSchema(parser.ProtoTree, "elementName")
 fmt.Println(xml)
 ```
 
