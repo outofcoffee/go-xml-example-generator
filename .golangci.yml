@@ -21,6 +21,9 @@ linters-settings:
     check-shadowing: true
   goimports:
     local-prefixes: github.com/outofcoffee/go-xml-example-generator
+  gosec:
+    excludes:
+      - G404  # Ignore weak random number generator warning as we're only generating example data
 
 issues:
   exclude-use-default: false
