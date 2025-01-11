@@ -16,6 +16,8 @@ type Generator struct {
 	nElements int
 	r         *rand.Rand
 	protoTree []interface{}
+	namespace string
+	prefix    string
 }
 
 // words is a slice of sample words for text content
@@ -41,6 +43,19 @@ func Generate(schemaPath string, elementName string) (string, error) {
 	}
 
 	g := NewGenerator(protoTree)
+	return g.generateXML(elementName), nil
+}
+
+// GenerateWithNs generates an example XML snippet with the specified namespace and prefix
+func GenerateWithNs(schemaPath string, elementName string, namespace string, prefix string) (string, error) {
+	protoTree, err := parseSchema(schemaPath)
+	if err != nil {
+		return "", err
+	}
+
+	g := NewGenerator(protoTree)
+	g.namespace = namespace
+	g.prefix = prefix
 	return g.generateXML(elementName), nil
 }
 
@@ -95,7 +110,16 @@ func (g *Generator) generateElement(buf *bytes.Buffer, element *xgen.Element, in
 	// Write opening tag with indentation
 	g.writeIndent(buf, indent)
 	buf.WriteString("<")
+	if g.prefix != "" {
+		buf.WriteString(g.prefix)
+		buf.WriteString(":")
+	}
 	buf.WriteString(element.Name)
+
+	// Write namespace declaration for root element (indent == 0)
+	if indent == 0 && g.namespace != "" && g.prefix != "" {
+		buf.WriteString(fmt.Sprintf(" xmlns:%s=\"%s\"", g.prefix, g.namespace))
+	}
 
 	// Write closing tag
 	if element.Type == "" {
@@ -121,6 +145,10 @@ func (g *Generator) generateElement(buf *bytes.Buffer, element *xgen.Element, in
 	}
 
 	buf.WriteString("</")
+	if g.prefix != "" {
+		buf.WriteString(g.prefix)
+		buf.WriteString(":")
+	}
 	buf.WriteString(element.Name)
 	buf.WriteString(">\n")
 }
@@ -131,6 +159,10 @@ func (g *Generator) generateComplexTypeContent(buf *bytes.Buffer, complexType *x
 	for _, element := range complexType.Elements {
 		g.writeIndent(buf, indent)
 		buf.WriteString("<")
+		if g.prefix != "" {
+			buf.WriteString(g.prefix)
+			buf.WriteString(":")
+		}
 		buf.WriteString(element.Name)
 		buf.WriteString(">")
 		// Remove any namespace prefix for simple types
@@ -140,6 +172,10 @@ func (g *Generator) generateComplexTypeContent(buf *bytes.Buffer, complexType *x
 		}
 		g.generateSimpleTypeContent(buf, simpleType)
 		buf.WriteString("</")
+		if g.prefix != "" {
+			buf.WriteString(g.prefix)
+			buf.WriteString(":")
+		}
 		buf.WriteString(element.Name)
 		buf.WriteString(">\n")
 	}

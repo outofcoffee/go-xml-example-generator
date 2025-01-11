@@ -7,6 +7,7 @@ A Go tool/library that generates example XML snippets from XSD schemas. Given an
 - Generates example XML for any element defined in an XSD schema
 - Handles complex types with nested elements
 - Supports common XSD types (string, int, boolean, date, etc.)
+- Optional namespace support with custom prefixes
 
 ## Installation
 
@@ -41,6 +42,8 @@ This will output something like:
 ```
 
 ### As a Library
+
+Basic usage:
 ```go
 import "github.com/outofcoffee/go-xml-example-generator/examplegen"
 
@@ -50,6 +53,20 @@ if err != nil {
     log.Fatal(err)
 }
 fmt.Println(xml)
+```
+
+With namespace support:
+```go
+// Generate XML with a namespace and prefix
+xml, err := examplegen.GenerateWithNs("path/to/schema.xsd", "elementName", "urn:foo:bar", "foo")
+if err != nil {
+    log.Fatal(err)
+}
+fmt.Println(xml)
+// Output:
+// <foo:elementName xmlns:foo="urn:foo:bar">
+//   <foo:childElement>value</foo:childElement>
+// </foo:elementName>
 ```
 
 ## Building from Source

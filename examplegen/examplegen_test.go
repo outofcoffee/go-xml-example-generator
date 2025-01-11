@@ -137,3 +137,63 @@ func TestGenerateSimpleTypes(t *testing.T) {
 		})
 	}
 }
+
+func TestGenerateWithNs_GetPetByIdResponse(t *testing.T) {
+	xmlStr, err := GenerateWithNs("../schemas/petstore.xsd", "getPetByIdResponse", "urn:foo:bar", "foo")
+	if err != nil {
+		t.Fatalf("Failed to generate XML: %v", err)
+	}
+
+	// Verify it's valid XML
+	if err := xml.Unmarshal([]byte(xmlStr), new(interface{})); err != nil {
+		t.Errorf("Generated XML is not valid: %v\nXML: %s", err, xmlStr)
+	}
+
+	// Verify namespace declaration
+	if !strings.Contains(xmlStr, `xmlns:foo="urn:foo:bar"`) {
+		t.Error("Missing namespace declaration")
+	}
+
+	// Verify structure with prefixes
+	expectedElements := []string{
+		"<foo:getPetByIdResponse",
+		"<foo:id>",
+		"</foo:id>",
+		"<foo:name>",
+		"</foo:name>",
+		"</foo:getPetByIdResponse>",
+	}
+
+	for _, expected := range expectedElements {
+		if !strings.Contains(xmlStr, expected) {
+			t.Errorf("Missing expected element: %s", expected)
+		}
+	}
+}
+
+func TestGenerateWithNs_EmptyPrefix(t *testing.T) {
+	xmlStr, err := GenerateWithNs("../schemas/petstore.xsd", "getPetByIdResponse", "urn:foo:bar", "")
+	if err != nil {
+		t.Fatalf("Failed to generate XML: %v", err)
+	}
+
+	// Should not have any namespace declarations or prefixes
+	if strings.Contains(xmlStr, "xmlns:") {
+		t.Error("Should not have namespace declaration with empty prefix")
+	}
+	if strings.Contains(xmlStr, ":getPetByIdResponse") {
+		t.Error("Should not have prefixed elements with empty prefix")
+	}
+}
+
+func TestGenerateWithNs_EmptyNamespace(t *testing.T) {
+	xmlStr, err := GenerateWithNs("../schemas/petstore.xsd", "getPetByIdResponse", "", "foo")
+	if err != nil {
+		t.Fatalf("Failed to generate XML: %v", err)
+	}
+
+	// Should not have any namespace declarations
+	if strings.Contains(xmlStr, "xmlns:") {
+		t.Error("Should not have namespace declaration with empty namespace")
+	}
+}
