@@ -159,25 +159,19 @@ func (g *Generator) generateComplexTypeContent(buf *bytes.Buffer, complexType *x
 	for _, element := range complexType.Elements {
 		g.writeIndent(buf, indent)
 		buf.WriteString("<")
-		if g.prefix != "" {
+		if !strings.Contains(element.Name, ":") && g.prefix != "" {
 			buf.WriteString(g.prefix)
 			buf.WriteString(":")
 		}
 		elementName := element.Name
-		// Remove any namespace prefix (e.g., "tns:pet" -> "pet")
-		if idx := strings.Index(elementName, ":"); idx >= 0 {
-			elementName = elementName[idx+1:]
-		}
+
 		buf.WriteString(elementName)
 		buf.WriteString(">")
-		// Remove any namespace prefix for simple types
+
 		simpleType := element.Type
-		if idx := strings.Index(simpleType, ":"); idx >= 0 {
-			simpleType = simpleType[idx+1:]
-		}
 		g.generateSimpleTypeContent(buf, simpleType)
 		buf.WriteString("</")
-		if g.prefix != "" {
+		if !strings.Contains(element.Name, ":") && g.prefix != "" {
 			buf.WriteString(g.prefix)
 			buf.WriteString(":")
 		}
