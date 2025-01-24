@@ -14,7 +14,7 @@ func TestGenerate_Examples(t *testing.T) {
 
 	t.Log("\nExample XML for each element type:")
 	for _, element := range elements {
-		xmlStr, err := Generate("../schemas/petstore.xsd", element)
+		xmlStr, err := Generate("../schemas/simple/petstore.xsd", element)
 		if err != nil {
 			t.Errorf("Failed to generate XML for %s: %v", element, err)
 			continue
@@ -24,7 +24,7 @@ func TestGenerate_Examples(t *testing.T) {
 }
 
 func TestGenerate_GetPetByIdRequest(t *testing.T) {
-	xmlStr, err := Generate("../schemas/petstore.xsd", "getPetByIdRequest")
+	xmlStr, err := Generate("../schemas/simple/petstore.xsd", "getPetByIdRequest")
 	if err != nil {
 		t.Fatalf("Failed to generate XML: %v", err)
 	}
@@ -44,7 +44,7 @@ func TestGenerate_GetPetByIdRequest(t *testing.T) {
 }
 
 func TestGenerate_GetPetByIdResponse(t *testing.T) {
-	xmlStr, err := Generate("../schemas/petstore.xsd", "getPetByIdResponse")
+	xmlStr, err := Generate("../schemas/simple/petstore.xsd", "getPetByIdResponse")
 	if err != nil {
 		t.Fatalf("Failed to generate XML: %v", err)
 	}
@@ -67,7 +67,7 @@ func TestGenerate_GetPetByIdResponse(t *testing.T) {
 }
 
 func TestGenerate_Fault(t *testing.T) {
-	xmlStr, err := Generate("../schemas/petstore.xsd", "fault")
+	xmlStr, err := Generate("../schemas/simple/petstore.xsd", "fault")
 	if err != nil {
 		t.Fatalf("Failed to generate XML: %v", err)
 	}
@@ -88,7 +88,7 @@ func TestGenerate_Fault(t *testing.T) {
 }
 
 func TestGenerate_NonExistentElement(t *testing.T) {
-	xmlStr, err := Generate("../schemas/petstore.xsd", "nonexistent")
+	xmlStr, err := Generate("../schemas/simple/petstore.xsd", "nonexistent")
 	if err != nil {
 		t.Fatalf("Failed to generate XML: %v", err)
 	}
@@ -139,7 +139,7 @@ func TestGenerateSimpleTypes(t *testing.T) {
 }
 
 func TestGenerateWithNs_GetPetByIdResponse(t *testing.T) {
-	xmlStr, err := GenerateWithNs("../schemas/petstore.xsd", "getPetByIdResponse", "urn:foo:bar", "foo")
+	xmlStr, err := GenerateWithNs("../schemas/simple/petstore.xsd", "getPetByIdResponse", "urn:foo:bar", "foo")
 	if err != nil {
 		t.Fatalf("Failed to generate XML: %v", err)
 	}
@@ -172,7 +172,7 @@ func TestGenerateWithNs_GetPetByIdResponse(t *testing.T) {
 }
 
 func TestGenerateWithNs_EmptyPrefix(t *testing.T) {
-	xmlStr, err := GenerateWithNs("../schemas/petstore.xsd", "getPetByIdResponse", "urn:foo:bar", "")
+	xmlStr, err := GenerateWithNs("../schemas/simple/petstore.xsd", "getPetByIdResponse", "urn:foo:bar", "")
 	if err != nil {
 		t.Fatalf("Failed to generate XML: %v", err)
 	}
@@ -187,7 +187,7 @@ func TestGenerateWithNs_EmptyPrefix(t *testing.T) {
 }
 
 func TestGenerateWithNs_EmptyNamespace(t *testing.T) {
-	xmlStr, err := GenerateWithNs("../schemas/petstore.xsd", "getPetByIdResponse", "", "foo")
+	xmlStr, err := GenerateWithNs("../schemas/simple/petstore.xsd", "getPetByIdResponse", "", "foo")
 	if err != nil {
 		t.Fatalf("Failed to generate XML: %v", err)
 	}
