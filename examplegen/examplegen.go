@@ -181,7 +181,7 @@ func (g *Generator) generateComplexTypeContent(buf *bytes.Buffer, complexType *x
 			buf.WriteString(g.prefix)
 			buf.WriteString(":")
 		}
-		buf.WriteString(element.Name)
+		buf.WriteString(elementName)
 		buf.WriteString(">\n")
 	}
 }
