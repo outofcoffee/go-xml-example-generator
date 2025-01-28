@@ -10,103 +10,117 @@ import (
 )
 
 func TestGenerate_Examples(t *testing.T) {
-	elements := []string{"getPetByIdRequest", "getPetByIdResponse", "fault"}
+	tests := []struct {
+		name       string
+		xsdPath    string
+		element    string
+		wantErr    bool
+		validation func(string) bool
+	}{
+		{
+			name:    "getPetByIdRequest",
+			xsdPath: "../schemas/simple/petstore.xsd",
+			element: "getPetByIdRequest",
+			validation: func(xml string) bool {
+				return strings.Contains(xml, "<getPetByIdRequest>") &&
+					strings.Contains(xml, "<id>")
+			},
+		},
+		{
+			name:    "getPetByIdResponse",
+			xsdPath: "../schemas/simple/petstore.xsd",
+			element: "getPetByIdResponse",
+			validation: func(xml string) bool {
+				return strings.Contains(xml, "<getPetByIdResponse>") &&
+					strings.Contains(xml, "<id>") &&
+					strings.Contains(xml, "<name>")
+			},
+		},
+		{
+			name:    "fault",
+			xsdPath: "../schemas/simple/petstore.xsd",
+			element: "fault",
+			validation: func(xml string) bool {
+				return strings.Contains(xml, "<fault>") &&
+					!strings.Contains(xml, "<fault></fault>")
+			},
+		},
+		{
+			name:    "non-existent element",
+			xsdPath: "../schemas/simple/petstore.xsd",
+			element: "nonexistent",
+			validation: func(xml string) bool {
+				return strings.Contains(xml, "<!-- Element nonexistent not found -->")
+			},
+		},
+		{
+			name:    "non-existent schema",
+			xsdPath: "nonexistent.xsd",
+			element: "element",
+			wantErr: true,
+		},
+		{
+			name:    "element-ref getPetByIdRequest",
+			xsdPath: "../schemas/element-ref/petstore.xsd",
+			element: "getPetByIdRequest",
+			validation: func(xml string) bool {
+				return strings.Contains(xml, "<getPetByIdRequest>") &&
+					strings.Contains(xml, "<id>") &&
+					!strings.Contains(xml, "tns:id") &&
+					!strings.Contains(xml, "</id></id>")
+			},
+		},
+		{
+			name:    "element-ref getPetByIdResponse",
+			xsdPath: "../schemas/element-ref/petstore.xsd",
+			element: "getPetByIdResponse",
+			validation: func(xml string) bool {
+				return strings.Contains(xml, "<getPetByIdResponse>") &&
+					strings.Contains(xml, "<id>") &&
+					!strings.Contains(xml, "tns:id") &&
+					strings.Contains(xml, "<name>") &&
+					!strings.Contains(xml, "</id></id>")
+			},
+		},
+		{
+			name:    "element-ref fault",
+			xsdPath: "../schemas/element-ref/petstore.xsd",
+			element: "fault",
+			validation: func(xml string) bool {
+				return strings.Contains(xml, "<fault>") &&
+					!strings.Contains(xml, "<fault></fault>")
+			},
+		},
+	}
 
-	t.Log("\nExample XML for each element type:")
-	for _, element := range elements {
-		xmlStr, err := Generate("../schemas/simple/petstore.xsd", element)
-		if err != nil {
-			t.Errorf("Failed to generate XML for %s: %v", element, err)
-			continue
-		}
-		t.Logf("\n%s:\n%s", element, xmlStr)
-	}
-}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			xmlStr, err := Generate(tt.xsdPath, tt.element)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Generate() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if err != nil {
+				return
+			}
 
-func TestGenerate_GetPetByIdRequest(t *testing.T) {
-	xmlStr, err := Generate("../schemas/simple/petstore.xsd", "getPetByIdRequest")
-	if err != nil {
-		t.Fatalf("Failed to generate XML: %v", err)
-	}
+			// Verify it's valid XML unless it's a non-existent element case
+			if !strings.Contains(xmlStr, "<!-- Element") {
+				if err := xml.Unmarshal([]byte(xmlStr), new(interface{})); err != nil {
+					t.Errorf("Generated XML is not valid: %v\nXML: %s", err, xmlStr)
+				}
+			}
 
-	// Verify it's valid XML
-	if err := xml.Unmarshal([]byte(xmlStr), new(interface{})); err != nil {
-		t.Errorf("Generated XML is not valid: %v\nXML: %s", err, xmlStr)
-	}
-
-	// Verify structure
-	if !strings.Contains(xmlStr, "<getPetByIdRequest>") {
-		t.Error("Missing root element getPetByIdRequest")
-	}
-	if !strings.Contains(xmlStr, "<id>") {
-		t.Error("Missing id element")
-	}
-}
-
-func TestGenerate_GetPetByIdResponse(t *testing.T) {
-	xmlStr, err := Generate("../schemas/simple/petstore.xsd", "getPetByIdResponse")
-	if err != nil {
-		t.Fatalf("Failed to generate XML: %v", err)
-	}
-
-	// Verify it's valid XML
-	if err := xml.Unmarshal([]byte(xmlStr), new(interface{})); err != nil {
-		t.Errorf("Generated XML is not valid: %v\nXML: %s", err, xmlStr)
-	}
-
-	// Verify structure
-	if !strings.Contains(xmlStr, "<getPetByIdResponse>") {
-		t.Error("Missing root element getPetByIdResponse")
-	}
-	if !strings.Contains(xmlStr, "<id>") {
-		t.Error("Missing id element")
-	}
-	if !strings.Contains(xmlStr, "<name>") {
-		t.Error("Missing name element")
-	}
-}
-
-func TestGenerate_Fault(t *testing.T) {
-	xmlStr, err := Generate("../schemas/simple/petstore.xsd", "fault")
-	if err != nil {
-		t.Fatalf("Failed to generate XML: %v", err)
-	}
-
-	// Verify it's valid XML
-	if err := xml.Unmarshal([]byte(xmlStr), new(interface{})); err != nil {
-		t.Errorf("Generated XML is not valid: %v\nXML: %s", err, xmlStr)
-	}
-
-	// Verify structure
-	if !strings.Contains(xmlStr, "<fault>") {
-		t.Error("Missing root element fault")
-	}
-	// Since fault is a simple string type, verify it contains some content
-	if strings.Contains(xmlStr, "<fault></fault>") {
-		t.Error("Fault element is empty")
-	}
-}
-
-func TestGenerate_NonExistentElement(t *testing.T) {
-	xmlStr, err := Generate("../schemas/simple/petstore.xsd", "nonexistent")
-	if err != nil {
-		t.Fatalf("Failed to generate XML: %v", err)
-	}
-
-	if !strings.Contains(xmlStr, "<!-- Element nonexistent not found -->") {
-		t.Error("Expected comment for non-existent element")
-	}
-}
-
-func TestGenerate_NonExistentSchema(t *testing.T) {
-	_, err := Generate("nonexistent.xsd", "element")
-	if err == nil {
-		t.Error("Expected error for non-existent schema")
+			// Run custom validation if provided
+			if tt.validation != nil && !tt.validation(xmlStr) {
+				t.Errorf("Generated XML failed validation\nXML: %s", xmlStr)
+			}
+		})
 	}
 }
 
 func TestGenerateSimpleTypes(t *testing.T) {
-	g := NewGenerator(nil) // nil is fine as we're not using the protoTree
+	g := NewGenerator(nil, false) // nil is fine as we're not using the protoTree, and elementFormQual doesn't matter for simple types
 	tests := []struct {
 		typeName string
 		validate func(string) bool
@@ -138,62 +152,99 @@ func TestGenerateSimpleTypes(t *testing.T) {
 	}
 }
 
-func TestGenerateWithNs_GetPetByIdResponse(t *testing.T) {
-	xmlStr, err := GenerateWithNs("../schemas/simple/petstore.xsd", "getPetByIdResponse", "urn:foo:bar", "foo")
-	if err != nil {
-		t.Fatalf("Failed to generate XML: %v", err)
+func TestGenerateWithNs(t *testing.T) {
+	tests := []struct {
+		name      string
+		xsdPath   string
+		element   string
+		namespace string
+		prefix    string
+		validate  func(string) bool
+	}{
+		{
+			name:      "getPetByIdResponse with namespace",
+			xsdPath:   "../schemas/simple/petstore.xsd",
+			element:   "getPetByIdResponse",
+			namespace: "urn:foo:bar",
+			prefix:    "foo",
+			validate: func(xml string) bool {
+				return strings.Contains(xml, `xmlns:foo="urn:foo:bar"`) &&
+					strings.Contains(xml, "<foo:getPetByIdResponse") &&
+					strings.Contains(xml, "<foo:id>") &&
+					strings.Contains(xml, "</foo:id>") &&
+					strings.Contains(xml, "<foo:name>") &&
+					strings.Contains(xml, "</foo:name>") &&
+					strings.Contains(xml, "</foo:getPetByIdResponse>")
+			},
+		},
+		{
+			name:      "empty prefix",
+			xsdPath:   "../schemas/simple/petstore.xsd",
+			element:   "getPetByIdResponse",
+			namespace: "urn:foo:bar",
+			prefix:    "",
+			validate: func(xml string) bool {
+				return !strings.Contains(xml, "xmlns:") &&
+					!strings.Contains(xml, ":getPetByIdResponse")
+			},
+		},
+		{
+			name:      "empty namespace",
+			xsdPath:   "../schemas/simple/petstore.xsd",
+			element:   "getPetByIdResponse",
+			namespace: "",
+			prefix:    "foo",
+			validate: func(xml string) bool {
+				return !strings.Contains(xml, "xmlns:")
+			},
+		},
+		{
+			name:      "element-ref getPetByIdResponse with namespace",
+			xsdPath:   "../schemas/element-ref/petstore.xsd",
+			element:   "getPetByIdResponse",
+			namespace: "urn:com:example:petstore",
+			prefix:    "tns",
+			validate: func(xml string) bool {
+				return strings.Contains(xml, `xmlns:tns="urn:com:example:petstore"`) &&
+					strings.Contains(xml, "<tns:getPetByIdResponse") &&
+					strings.Contains(xml, "<tns:id>") &&
+					strings.Contains(xml, "<tns:name>") &&
+					strings.Contains(xml, "</tns:getPetByIdResponse>") &&
+					!strings.Contains(xml, "</tns:id></tns:id>")
+			},
+		},
+		{
+			name:      "element-ref getPetByIdRequest with namespace",
+			xsdPath:   "../schemas/element-ref/petstore.xsd",
+			element:   "getPetByIdRequest",
+			namespace: "urn:com:example:petstore",
+			prefix:    "tns",
+			validate: func(xml string) bool {
+				return strings.Contains(xml, `xmlns:tns="urn:com:example:petstore"`) &&
+					strings.Contains(xml, "<tns:getPetByIdRequest") &&
+					strings.Contains(xml, "<tns:id>") &&
+					strings.Contains(xml, "</tns:getPetByIdRequest>") &&
+					!strings.Contains(xml, "</tns:id></tns:id>")
+			},
+		},
 	}
 
-	// Verify it's valid XML
-	if err := xml.Unmarshal([]byte(xmlStr), new(interface{})); err != nil {
-		t.Errorf("Generated XML is not valid: %v\nXML: %s", err, xmlStr)
-	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			xmlStr, err := GenerateWithNs(tt.xsdPath, tt.element, tt.namespace, tt.prefix)
+			if err != nil {
+				t.Fatalf("Failed to generate XML: %v", err)
+			}
 
-	// Verify namespace declaration
-	if !strings.Contains(xmlStr, `xmlns:foo="urn:foo:bar"`) {
-		t.Error("Missing namespace declaration")
-	}
+			// Verify it's valid XML
+			if err := xml.Unmarshal([]byte(xmlStr), new(interface{})); err != nil {
+				t.Errorf("Generated XML is not valid: %v\nXML: %s", err, xmlStr)
+			}
 
-	// Verify structure with prefixes
-	expectedElements := []string{
-		"<foo:getPetByIdResponse",
-		"<foo:id>",
-		"</foo:id>",
-		"<foo:name>",
-		"</foo:name>",
-		"</foo:getPetByIdResponse>",
-	}
-
-	for _, expected := range expectedElements {
-		if !strings.Contains(xmlStr, expected) {
-			t.Errorf("Missing expected element: %s", expected)
-		}
-	}
-}
-
-func TestGenerateWithNs_EmptyPrefix(t *testing.T) {
-	xmlStr, err := GenerateWithNs("../schemas/simple/petstore.xsd", "getPetByIdResponse", "urn:foo:bar", "")
-	if err != nil {
-		t.Fatalf("Failed to generate XML: %v", err)
-	}
-
-	// Should not have any namespace declarations or prefixes
-	if strings.Contains(xmlStr, "xmlns:") {
-		t.Error("Should not have namespace declaration with empty prefix")
-	}
-	if strings.Contains(xmlStr, ":getPetByIdResponse") {
-		t.Error("Should not have prefixed elements with empty prefix")
-	}
-}
-
-func TestGenerateWithNs_EmptyNamespace(t *testing.T) {
-	xmlStr, err := GenerateWithNs("../schemas/simple/petstore.xsd", "getPetByIdResponse", "", "foo")
-	if err != nil {
-		t.Fatalf("Failed to generate XML: %v", err)
-	}
-
-	// Should not have any namespace declarations
-	if strings.Contains(xmlStr, "xmlns:") {
-		t.Error("Should not have namespace declaration with empty namespace")
+			// Run custom validation
+			if !tt.validate(xmlStr) {
+				t.Errorf("Generated XML failed validation\nXML: %s", xmlStr)
+			}
+		})
 	}
 }

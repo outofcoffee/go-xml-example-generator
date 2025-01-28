@@ -12,12 +12,13 @@ import (
 
 // Generator holds the state for XML snippet generation
 type Generator struct {
-	typeStack []string
-	nElements int
-	r         *rand.Rand
-	protoTree []interface{}
-	namespace string
-	prefix    string
+	typeStack       []string
+	nElements       int
+	r               *rand.Rand
+	protoTree       []interface{}
+	namespace       string
+	prefix          string
+	elementFormQual bool // true if elementFormDefault="qualified", false if "unqualified"
 }
 
 // words is a slice of sample words for text content
@@ -27,35 +28,42 @@ var words = []string{
 }
 
 // NewGenerator creates a new XML snippet generator
-func NewGenerator(protoTree []interface{}) *Generator {
+func NewGenerator(protoTree []interface{}, elementFormQual bool) *Generator {
+	// TODO set g.namespace to the target namespace of the schema
 	return &Generator{
-		typeStack: make([]string, 0),
-		r:         rand.New(rand.NewSource(time.Now().UnixNano())),
-		protoTree: protoTree,
+		typeStack:       make([]string, 0),
+		r:               rand.New(rand.NewSource(time.Now().UnixNano())),
+		protoTree:       protoTree,
+		elementFormQual: elementFormQual,
 	}
 }
 
 // Generate generates an example XML snippet for the given element from an XSD schema file
 func Generate(schemaPath string, elementName string) (string, error) {
-	protoTree, err := parseSchema(schemaPath)
+	protoTree, elementFormQual, err := parseSchema(schemaPath)
 	if err != nil {
 		return "", err
 	}
 
-	g := NewGenerator(protoTree)
+	g := NewGenerator(protoTree, elementFormQual)
 	return g.generateXML(elementName), nil
 }
 
 // GenerateWithNs generates an example XML snippet with the specified namespace and prefix
 func GenerateWithNs(schemaPath string, elementName string, namespace string, prefix string) (string, error) {
-	protoTree, err := parseSchema(schemaPath)
+	protoTree, elementFormQual, err := parseSchema(schemaPath)
 	if err != nil {
 		return "", err
 	}
 
-	g := NewGenerator(protoTree)
+	g := NewGenerator(protoTree, elementFormQual)
 	g.namespace = namespace
 	g.prefix = prefix
+
+	// Override elementFormQual if a namespace and prefix are provided
+	if g.prefix != "" && g.namespace != "" {
+		g.elementFormQual = true
+	}
 	return g.generateXML(elementName), nil
 }
 
@@ -110,15 +118,19 @@ func (g *Generator) generateElement(buf *bytes.Buffer, element *xgen.Element, in
 	// Write opening tag with indentation
 	g.writeIndent(buf, indent)
 	buf.WriteString("<")
-	if g.prefix != "" {
+	if g.prefix != "" && g.elementFormQual {
 		buf.WriteString(g.prefix)
 		buf.WriteString(":")
 	}
 	buf.WriteString(element.Name)
 
 	// Write namespace declaration for root element (indent == 0)
-	if indent == 0 && g.namespace != "" && g.prefix != "" {
-		buf.WriteString(fmt.Sprintf(" xmlns:%s=\"%s\"", g.prefix, g.namespace))
+	if indent == 0 && g.namespace != "" {
+		if g.prefix != "" && g.elementFormQual {
+			buf.WriteString(fmt.Sprintf(" xmlns:%s=\"%s\"", g.prefix, g.namespace))
+		} else {
+			buf.WriteString(fmt.Sprintf(" xmlns=\"%s\"", g.namespace))
+		}
 	}
 
 	// Write closing tag
@@ -145,7 +157,7 @@ func (g *Generator) generateElement(buf *bytes.Buffer, element *xgen.Element, in
 	}
 
 	buf.WriteString("</")
-	if g.prefix != "" {
+	if g.prefix != "" && g.elementFormQual {
 		buf.WriteString(g.prefix)
 		buf.WriteString(":")
 	}
@@ -159,11 +171,20 @@ func (g *Generator) generateComplexTypeContent(buf *bytes.Buffer, complexType *x
 	for _, element := range complexType.Elements {
 		g.writeIndent(buf, indent)
 		buf.WriteString("<")
-		if !strings.Contains(element.Name, ":") && g.prefix != "" {
+
+		// Handle element references and prefixes
+		elementName := element.Name
+		if strings.Contains(elementName, ":") {
+			// For element references, remove the reference's prefix
+			parts := strings.SplitN(elementName, ":", 2)
+			elementName = parts[1]
+		}
+
+		if g.prefix != "" && g.elementFormQual {
+			// For non-refs, only apply prefix if elementFormDefault="qualified"
 			buf.WriteString(g.prefix)
 			buf.WriteString(":")
 		}
-		elementName := element.Name
 
 		buf.WriteString(elementName)
 		buf.WriteString(">")
@@ -171,7 +192,16 @@ func (g *Generator) generateComplexTypeContent(buf *bytes.Buffer, complexType *x
 		simpleType := element.Type
 		g.generateSimpleTypeContent(buf, simpleType)
 		buf.WriteString("</")
-		if !strings.Contains(element.Name, ":") && g.prefix != "" {
+
+		// Handle element references and prefixes in closing tag
+		if strings.Contains(element.Name, ":") {
+			// For element references, remove the reference's prefix
+			parts := strings.SplitN(element.Name, ":", 2)
+			elementName = parts[1]
+		}
+
+		if g.prefix != "" && g.elementFormQual {
+			// For non-refs, only apply prefix if elementFormDefault="qualified"
 			buf.WriteString(g.prefix)
 			buf.WriteString(":")
 		}
