@@ -10,10 +10,9 @@ import (
 )
 
 type xsdElement struct {
-	XMLName     xml.Name       `xml:"element"`
-	Ref         string         `xml:"ref,attr"`
-	Name        string         `xml:"name,attr"`
-	ComplexType xsdComplexType `xml:"complexType"`
+	XMLName xml.Name `xml:"element"`
+	Ref     string   `xml:"ref,attr"`
+	Name    string   `xml:"name,attr"`
 }
 
 type xsdComplexType struct {
@@ -67,25 +66,6 @@ func parseSchema(schemaPath string) ([]interface{}, bool, error) {
 
 	// Default is "unqualified" if not specified
 	elementFormQual := schema.ElementFormDefault == "qualified"
-
-	// Process the proto tree to handle element references
-	for _, item := range parser.ProtoTree {
-		if ct, ok := item.(*xgen.ComplexType); ok {
-			for i, element := range ct.Elements {
-				// Find the corresponding element in the schema
-				for _, schemaType := range schema.ComplexTypes {
-					if schemaType.Name == ct.Name {
-						for _, schemaElement := range append(schemaType.All, schemaType.Sequence...) {
-							if schemaElement.Name == element.Name && schemaElement.Ref != "" {
-								// Update the element name to include the reference prefix
-								ct.Elements[i].Name = schemaElement.Ref
-							}
-						}
-					}
-				}
-			}
-		}
-	}
 
 	return parser.ProtoTree, elementFormQual, nil
 }
