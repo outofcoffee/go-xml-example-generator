@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/xml"
 	"fmt"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -89,6 +90,22 @@ func TestGenerate_Examples(t *testing.T) {
 			validation: func(xml string) bool {
 				return strings.Contains(xml, "<fault>") &&
 					!strings.Contains(xml, "<fault></fault>")
+			},
+		},
+		{
+			name:    "element-from-import getPetByIdResponse",
+			xsdPath: "../schemas/element-from-import/main.xsd",
+			element: "getPetByIdResponse",
+			validation: func(xml string) bool {
+				matched, err := regexp.MatchString("<id>[0-9]+</id>", xml)
+				if err != nil || !matched {
+					return false
+				}
+
+				return strings.Contains(xml, "<getPetByIdResponse>") &&
+					!strings.Contains(xml, "tns:id") &&
+					strings.Contains(xml, "<name>") &&
+					!strings.Contains(xml, "</id></id>")
 			},
 		},
 	}

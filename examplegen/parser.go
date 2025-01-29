@@ -6,8 +6,31 @@ import (
 	"os"
 	"strings"
 
-	"github.com/xuri/xgen"
+	"github.com/outofcoffee/xgen"
 )
+
+type xsdElement struct {
+	XMLName     xml.Name       `xml:"element"`
+	Ref         string         `xml:"ref,attr"`
+	Name        string         `xml:"name,attr"`
+	ComplexType xsdComplexType `xml:"complexType"`
+}
+
+type xsdComplexType struct {
+	XMLName  xml.Name     `xml:"complexType"`
+	Name     string       `xml:"name,attr"`
+	All      []xsdElement `xml:"all>element"`
+	Sequence []xsdElement `xml:"sequence>element"`
+}
+
+type xsdSchema struct {
+	XMLName            xml.Name         `xml:"schema"`
+	ElementFormDefault string           `xml:"elementFormDefault,attr"`
+	TargetNamespace    string           `xml:"targetNamespace,attr"`
+	Elements           []xsdElement     `xml:"element"`
+	ComplexTypes       []xsdComplexType `xml:"complexType"`
+	Attrs              []xml.Attr       `xml:",any,attr"`
+}
 
 // parseSchema parses an XSD schema file and returns its proto tree and elementFormDefault value
 func parseSchema(schemaPath string) ([]interface{}, bool, error) {
@@ -18,28 +41,6 @@ func parseSchema(schemaPath string) ([]interface{}, bool, error) {
 	}
 
 	// Parse just enough of the XML to get the schema attributes
-	type xsdElement struct {
-		XMLName xml.Name `xml:"element"`
-		Ref     string   `xml:"ref,attr"`
-		Name    string   `xml:"name,attr"`
-	}
-
-	type xsdComplexType struct {
-		XMLName  xml.Name     `xml:"complexType"`
-		Name     string       `xml:"name,attr"`
-		All      []xsdElement `xml:"all>element"`
-		Sequence []xsdElement `xml:"sequence>element"`
-	}
-
-	type xsdSchema struct {
-		XMLName            xml.Name         `xml:"schema"`
-		ElementFormDefault string           `xml:"elementFormDefault,attr"`
-		TargetNamespace    string           `xml:"targetNamespace,attr"`
-		Elements           []xsdElement     `xml:"element"`
-		ComplexTypes       []xsdComplexType `xml:"complexType"`
-		Attrs              []xml.Attr       `xml:",any,attr"`
-	}
-
 	var schema xsdSchema
 	decoder := xml.NewDecoder(strings.NewReader(string(schemaBytes)))
 	if err := decoder.Decode(&schema); err != nil {
@@ -56,7 +57,8 @@ func parseSchema(schemaPath string) ([]interface{}, bool, error) {
 		ParseFileMap:        make(map[string][]interface{}),
 		ProtoTree:           make([]interface{}, 0),
 		RemoteSchema:        make(map[string][]byte),
-		Extract:             true,
+		Extract:             false,
+		SkipGenerate:        true,
 	})
 
 	if err := parser.Parse(); err != nil {

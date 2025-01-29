@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/xuri/xgen"
+	"github.com/outofcoffee/xgen"
 )
 
 // Generator holds the state for XML snippet generation
